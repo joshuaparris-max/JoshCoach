@@ -1,0 +1,121 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Topic {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  lessons     Lesson[]
+
+  @@index([order])
+}
+
+model Lesson {
+  id          String   @id @default(cuid())
+  topicId     String
+  title       String
+  slug        String   @unique
+  content     String
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  topic     Topic         @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  questions Question[]
+  attempts  QuizAttempt[]
+
+  @@index([topicId, order])
+}
+
+model Question {
+  id            String   @id @default(cuid())
+  lessonId      String
+  type          String
+  question      String
+  options       String?
+  correctAnswer String
+  explanation   String
+  order         Int      @default(0)
+
+  lesson      Lesson             @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  attempts    QuestionAttempt[]
+  reviewItems ReviewItem[]
+
+  @@index([lessonId, order])
+}
+
+model QuizAttempt {
+  id        String   @id @default(cuid())
+  lessonId  String
+  score     Int
+  total     Int
+  createdAt DateTime @default(now())
+
+  lesson   Lesson            @relation(fields: [lessonId], references: [id])
+  attempts QuestionAttempt[]
+
+  @@index([createdAt])
+}
+
+model QuestionAttempt {
+  id            String   @id @default(cuid())
+  quizAttemptId String
+  questionId    String
+  answer        String
+  correct       Boolean
+  quality       Int
+  createdAt     DateTime @default(now())
+
+  quizAttempt QuizAttempt @relation(fields: [quizAttemptId], references: [id], onDelete: Cascade)
+  question    Question    @relation(fields: [questionId], references: [id])
+
+  @@index([quizAttemptId])
+}
+
+model ReviewItem {
+  id             String   @id @default(cuid())
+  questionId     String   @unique
+  easinessFactor Float    @default(2.5)
+  intervalDays   Int      @default(0)
+  repetitions    Int      @default(0)
+  dueAt          DateTime @default(now())
+  lastReviewedAt DateTime?
+  createdAt      DateTime @default(now())
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([dueAt])
+}
+
+model Ritual {
+  id          String      @id @default(cuid())
+  title       String
+  description String
+  cadence     String // 'daily' | 'weekly'
+  order       Int         @default(0)
+  createdAt   DateTime    @default(now())
+  logs        RitualLog[]
+
+  @@index([cadence, order])
+}
+
+model RitualLog {
+  id        String   @id @default(cuid())
+  ritualId  String
+  date      DateTime
+  note      String?
+  createdAt DateTime @default(now())
+
+  ritual Ritual @relation(fields: [ritualId], references: [id], onDelete: Cascade)
+
+  @@unique([ritualId, date])
+  @@index([date])
+}
