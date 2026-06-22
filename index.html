@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>JoshCoach — a gentle daily micro-coach</title>
+<style>
+  :root { --bg:#11130f; --card:#1a1e16; --line:#2b3326; --text:#edf1e6; --muted:#9bab8c; --accent:#9ccf73; --warm:#e8c07a; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Georgia',serif; background:var(--bg); color:var(--text); line-height:1.7; padding:0 16px 48px; }
+  .wrap { max-width:640px; margin:0 auto; }
+  header { text-align:center; padding:30px 0 8px; }
+  header h1 { font-size:2rem; letter-spacing:.02em; }
+  header p { color:var(--muted); font-family:system-ui,sans-serif; font-size:.95rem; }
+  .streak { text-align:center; color:var(--warm); font-family:system-ui,sans-serif; font-size:.9rem; margin-bottom:18px; }
+  .tabs { display:flex; gap:6px; justify-content:center; margin-bottom:18px; font-family:system-ui,sans-serif; }
+  .tab { background:var(--card); border:1px solid var(--line); color:var(--text); border-radius:999px; padding:8px 18px; cursor:pointer; font-size:.9rem; }
+  .tab.active { background:var(--accent); border-color:var(--accent); color:#10160a; font-weight:600; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:22px; margin-bottom:14px; }
+  h2 { font-size:1.25rem; margin-bottom:8px; }
+  .muted { color:var(--muted); font-family:system-ui,sans-serif; font-size:.9rem; }
+  label { display:block; font-family:system-ui,sans-serif; font-size:.82rem; color:var(--muted); margin:14px 0 6px; letter-spacing:.04em; text-transform:uppercase; }
+  textarea,input[type=text] { width:100%; background:#12150f; border:1px solid var(--line); color:var(--text); border-radius:10px; padding:12px; font-family:'Georgia',serif; font-size:1rem; resize:vertical; }
+  textarea { min-height:54px; }
+  .feelings { display:flex; gap:8px; flex-wrap:wrap; }
+  .feel { background:#12150f; border:1px solid var(--line); border-radius:999px; padding:8px 14px; cursor:pointer; font-family:system-ui,sans-serif; font-size:.95rem; }
+  .feel.active { background:var(--warm); border-color:var(--warm); color:#1a1206; }
+  .btn { background:var(--accent); border:none; color:#10160a; font-weight:700; border-radius:10px; padding:12px 20px; cursor:pointer; font-family:system-ui,sans-serif; font-size:1rem; margin-top:16px; }
+  .btn.ghost { background:transparent; border:1px solid var(--line); color:var(--text); font-weight:500; }
+  .lesson { border-top:1px solid var(--line); padding:14px 0; }
+  .lesson:first-of-type { border-top:none; }
+  .lesson h3 { font-size:1.05rem; }
+  .lesson .body { color:var(--muted); font-size:.95rem; margin:4px 0 8px; }
+  .lesson .prompt { font-family:system-ui,sans-serif; font-size:.86rem; background:#12150f; border-left:3px solid var(--accent); border-radius:6px; padding:8px 12px; }
+  .hist { font-family:system-ui,sans-serif; }
+  .hitem { border-top:1px solid var(--line); padding:12px 0; font-size:.9rem; }
+  .hitem:first-of-type { border-top:none; }
+  .hitem .meta { color:var(--muted); font-size:.76rem; }
+  .empty { color:var(--muted); text-align:center; padding:18px; font-family:system-ui,sans-serif; }
+  .tag { display:inline-block; background:#12150f; border:1px solid var(--line); border-radius:999px; padding:1px 10px; font-size:.74rem; color:var(--warm); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🌱 JoshCoach</h1>
+    <p>A gentle daily micro-coach. Small, faithful steps — not a productivity machine.</p>
+  </header>
+  <div class="streak" id="streak"></div>
+  <div class="tabs">
+    <button class="tab active" data-t="today">Daily check-in</button>
+    <button class="tab" data-t="lessons">Today's cards</button>
+    <button class="tab" data-t="history">Reflections</button>
+  </div>
+  <div id="panel"></div>
+  <p class="muted" style="text-align:center;margin-top:8px">Everything stays in your browser. No accounts, no cloud, no AI.</p>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const RKEY='joshcoach_reflections_v1';
+const FEELINGS=['Calm','Tired','Anxious','Hopeful','Stretched','Grateful','Flat','Restless'];
+const LESSONS=[
+  {t:'One small faithful step', body:'Growth is rarely a leap. It is the next small thing, done with care.', prompt:'What is one small step you can actually do today?'},
+  {t:'Name it to tame it', body:'Putting a feeling into words loosens its grip on you.', prompt:'Name what you are feeling right now in one honest word.'},
+  {t:'The 2-minute start', body:'You don\'t have to finish. You only have to begin — for two minutes.', prompt:'What could you start for just two minutes?'},
+  {t:'Tend, don\'t strive', body:'You are a garden to tend, not a machine to optimise.', prompt:'What part of your life needs gentle tending, not pushing?'},
+  {t:'Enough for today', body:'You do not need to carry tomorrow\'s weight today.', prompt:'What can you set down until tomorrow?'},
+  {t:'Notice one gift', body:'Gratitude re-trains attention toward what is already good.', prompt:'What is one small gift in today you almost missed?'},
+  {t:'Rest is faithful too', body:'Stopping well is part of the work, not a failure of it.', prompt:'How will you rest, on purpose, today?'},
+];
+let chosenFeeling=null;
+function load(){ try{ return JSON.parse(localStorage.getItem(RKEY))||[]; }catch(e){ return []; } }
+function dayKey(d){ return new Date(d).toISOString().slice(0,10); }
+
+function streak(){
+  const list=load(); if(!list.length){ $('streak').textContent='Begin today — your first check-in starts the streak.'; return; }
+  const days=new Set(list.map(r=>dayKey(r.at))); let s=0; const cur=new Date();
+  while(days.has(dayKey(cur))){ s++; cur.setDate(cur.getDate()-1); }
+  $('streak').textContent = s>0 ? `🔥 ${s}-day streak · ${list.length} reflection${list.length===1?'':'s'} saved` : `${list.length} reflection${list.length===1?'':'s'} saved · check in to restart your streak`;
+}
+
+function renderToday(){
+  // lesson of the day = rotate by date
+  const lesson=LESSONS[new Date().getDate()%LESSONS.length];
+  $('panel').innerHTML=`<div class="card">
+    <span class="tag">Today's focus</span>
+    <h2 style="margin-top:8px">${lesson.t}</h2>
+    <div class="muted" style="font-family:Georgia,serif;color:var(--text)">${lesson.body}</div>
+    <label>How am I feeling?</label>
+    <div class="feelings" id="feelings"></div>
+    <label>What needs my attention?</label>
+    <textarea id="attention" placeholder="The thing that's been tugging at you…"></textarea>
+    <label>One small faithful next step</label>
+    <textarea id="step" placeholder="${lesson.prompt}"></textarea>
+    <button class="btn" id="save">Save reflection</button>
+  </div>`;
+  const fl=$('feelings'); FEELINGS.forEach(f=>{ const b=document.createElement('button'); b.className='feel'+(chosenFeeling===f?' active':''); b.textContent=f; b.onclick=()=>{ chosenFeeling=f; document.querySelectorAll('.feel').forEach(x=>x.classList.remove('active')); b.classList.add('active'); }; fl.appendChild(b); });
+  $('save').onclick=()=>{
+    const attention=$('attention').value.trim(), step=$('step').value.trim();
+    if(!chosenFeeling && !attention && !step){ alert('Add at least a feeling or a note before saving.'); return; }
+    const list=load();
+    list.unshift({ feeling:chosenFeeling, attention, step, lesson:lesson.t, at:new Date().toISOString() });
+    localStorage.setItem(RKEY, JSON.stringify(list.slice(0,365)));
+    chosenFeeling=null;
+    setTab('history'); streak();
+  };
+}
+
+function renderLessons(){
+  $('panel').innerHTML=`<div class="card"><h2>Reflection cards</h2><p class="muted">A small deck of gentle prompts. One becomes today's focus automatically.</p><div id="deck"></div></div>`;
+  const deck=$('deck');
+  LESSONS.forEach(l=>{ const d=document.createElement('div'); d.className='lesson'; d.innerHTML=`<h3>${l.t}</h3><div class="body">${l.body}</div><div class="prompt">💭 ${l.prompt}</div>`; deck.appendChild(d); });
+}
+
+function renderHistory(){
+  const list=load();
+  $('panel').innerHTML=`<div class="card hist"><h2>Your reflections</h2><div id="hl"></div>${list.length?'<button class="btn ghost" id="exp" style="margin-top:14px">Export JSON</button>':''}</div>`;
+  const hl=$('hl');
+  if(!list.length){ hl.innerHTML='<div class="empty">No reflections yet — your daily check-ins will gather here, gently.</div>'; return; }
+  hl.innerHTML=list.slice(0,30).map(r=>`<div class="hitem">
+    ${r.feeling?`<span class="tag">${r.feeling}</span> `:''}<span class="meta">${new Date(r.at).toLocaleString()} · ${esc(r.lesson||'')}</span>
+    ${r.attention?`<div><b>Attention:</b> ${esc(r.attention)}</div>`:''}
+    ${r.step?`<div><b>Next step:</b> ${esc(r.step)}</div>`:''}
+  </div>`).join('');
+  $('exp').onclick=()=>{ const b=new Blob([JSON.stringify(list,null,2)],{type:'application/json'}); const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download='joshcoach-reflections.json'; a.click(); };
+}
+function esc(s){ return (s||'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
+
+const TABS={today:renderToday,lessons:renderLessons,history:renderHistory};
+function setTab(t){ document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.t===t)); TABS[t](); }
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>setTab(t.dataset.t));
+renderToday(); streak();
+</script>
+</body>
+</html>
