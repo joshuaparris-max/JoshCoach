@@ -1,36 +1,63 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# JoshCoach
 
-## Getting Started
+A personal **micro-learning coaching app** built with Next.js. It turns short lessons into
+lasting habits using a tight **read → quiz → spaced-repetition review** loop, plus daily
+"rituals" logging and streak tracking.
 
-First, run the development server:
+The seeded content focuses on **relationship and intimacy skills** for couples —
+communication, attunement, desire, and connection — but the engine is content-agnostic:
+lessons are plain Markdown, so it can coach almost any topic.
+
+## Who it's for
+
+Anyone who wants to **learn a skill area in small, repeated reps** rather than one-off
+reading — here, a couple (or individual) building communication and intimacy skills. It's a
+single-user personal tool, not a multi-tenant product.
+
+## Features
+
+- **Dashboard** — "Today's Plan", current streak, reviews due, next lesson, and a 7-day
+  review-load chart.
+- **Lessons** — Markdown content grouped into topics (`content/lessons/*.md`).
+- **Quizzes** — per-lesson quizzes that feed the review system.
+- **Spaced repetition** — a review queue with due dates to reinforce recall over time.
+- **Rituals** — log recurring practices and keep a streak.
+- **Summary** — progress overview.
+
+## Tech stack
+
+- **Next.js** (App Router, TypeScript) + Tailwind
+- **Prisma** ORM with a SQL database (see `prisma/schema.prisma`, `prisma/seed.ts`)
+- **Vitest** for tests
+
+## How to run
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+
+# configure the database connection
+cp .env.example .env   # if present; otherwise create .env with DATABASE_URL=...
+
+# set up schema + seed content
+npx prisma migrate dev
+npx prisma db seed
+
+npm run dev            # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Other scripts: `npm run build`, `npm start`, `npm run lint`, `npm test`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+> **Note:** the app requires a database connection (`DATABASE_URL`). `npm run build` /
+> `vercel-build` run Prisma generate/migrate/seed, so they won't complete without one.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Status
 
-## Learn More
+**Working prototype.** Core loop (lessons, quizzes, reviews, rituals, dashboard) is
+implemented with a polished UI. Single-user, local/self-hosted; no authentication layer.
 
-To learn more about Next.js, take a look at the following resources:
+## Sensible next improvements
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Add `.env.example` documenting `DATABASE_URL` and any other required vars.
+- Optional authentication if it ever needs to be more than single-user.
+- A content-authoring guide (lesson + quiz Markdown format).
+- Seed-content toggle so the engine can be reused for other subject areas.
