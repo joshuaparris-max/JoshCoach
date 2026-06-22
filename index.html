@@ -106,10 +106,18 @@ function renderToday(){
   };
 }
 
+const CCKEY='joshcoach_customcards';
+function customCards(){ try{ return JSON.parse(localStorage.getItem(CCKEY))||[]; }catch(e){ return []; } }
 function renderLessons(){
-  $('panel').innerHTML=`<div class="card"><h2>Reflection cards</h2><p class="muted">A small deck of gentle prompts. One becomes today's focus automatically.</p><div id="deck"></div></div>`;
+  $('panel').innerHTML=`<div class="card"><h2>Reflection cards</h2><p class="muted">A small deck of gentle prompts. One becomes today's focus automatically. Add your own below.</p><div id="deck"></div>
+    <label>Add a card title</label><input type="text" id="ccTitle" placeholder="e.g. Walk before deciding">
+    <label>A gentle prompt</label><input type="text" id="ccPrompt" placeholder="e.g. What would a short walk make clearer?">
+    <button class="btn" id="ccAdd">Add card</button></div>`;
   const deck=$('deck');
-  LESSONS.forEach(l=>{ const d=document.createElement('div'); d.className='lesson'; d.innerHTML=`<h3>${l.t}</h3><div class="body">${l.body}</div><div class="prompt">💭 ${l.prompt}</div>`; deck.appendChild(d); });
+  const all=[...LESSONS, ...customCards()];
+  all.forEach((l,idx)=>{ const d=document.createElement('div'); d.className='lesson'; d.innerHTML=`<h3>${esc(l.t)}${l.custom?' <span class="tag">yours</span>':''}</h3><div class="body">${esc(l.body||'A prompt of your own.')}</div><div class="prompt">💭 ${esc(l.prompt)}</div>${l.custom?`<button class="btn ghost" data-del="${idx-LESSONS.length}" style="margin-top:6px;padding:4px 10px;font-size:.8rem">Remove</button>`:''}`; deck.appendChild(d); });
+  $('ccAdd').onclick=()=>{ const t=$('ccTitle').value.trim(), p=$('ccPrompt').value.trim(); if(!t||!p){ alert('Add a title and a prompt.'); return; } const cc=customCards(); cc.push({t,prompt:p,custom:true}); localStorage.setItem(CCKEY,JSON.stringify(cc)); renderLessons(); };
+  deck.querySelectorAll('[data-del]').forEach(b=>b.onclick=()=>{ const cc=customCards(); cc.splice(+b.dataset.del,1); localStorage.setItem(CCKEY,JSON.stringify(cc)); renderLessons(); });
 }
 
 function renderHistory(){
@@ -117,6 +125,17 @@ function renderHistory(){
   $('panel').innerHTML=`<div class="card hist"><h2>Your reflections</h2><div id="hl"></div>${list.length?'<button class="btn ghost" id="exp" style="margin-top:14px">Export JSON</button>':''}</div>`;
   const hl=$('hl');
   if(!list.length){ hl.innerHTML='<div class="empty">No reflections yet — your daily check-ins will gather here, gently.</div>'; return; }
+  // looking back: last 7 days
+  const weekAgo=Date.now()-7*864e5;
+  const week=list.filter(r=>new Date(r.at).getTime()>=weekAgo);
+  if(week.length){
+    const counts={}; week.forEach(r=>{ if(r.feeling) counts[r.feeling]=(counts[r.feeling]||0)+1; });
+    const top=Object.entries(counts).sort((a,b)=>b[1]-a[1]);
+    const strip=top.map(([f,n])=>`<span class="tag">${f} ×${n}</span>`).join(' ');
+    const card=document.createElement('div'); card.className='card'; card.style.marginBottom='12px';
+    card.innerHTML=`<span class="tag">Looking back · 7 days</span><h2 style="margin-top:8px;font-size:1.1rem">${week.length} check-in${week.length===1?'':'s'} this week</h2><div style="margin-top:6px">${strip||'<span class="muted">No feelings logged this week.</span>'}</div>`;
+    $('panel').insertBefore(card, $('panel').firstChild);
+  }
   hl.innerHTML=list.slice(0,30).map(r=>`<div class="hitem">
     ${r.feeling?`<span class="tag">${r.feeling}</span> `:''}<span class="meta">${new Date(r.at).toLocaleString()} · ${esc(r.lesson||'')}</span>
     ${r.attention?`<div><b>Attention:</b> ${esc(r.attention)}</div>`:''}
