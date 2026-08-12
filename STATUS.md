@@ -8,12 +8,7 @@
 - Export reflections as JSON.
 - No accounts, no cloud, no AI.
 
-## Also in the repo
-- Earlier **Next.js + Prisma** scaffold (richer, DB-backed). Requires a valid `DATABASE_URL`
-  to build (`vercel-build` runs prisma migrate/seed). Kept for reference, not the live MVP.
-
 ## Next steps
 - Optional gentle reminders / "time of day" tone.
 - A weekly "looking back" summary of feelings.
 - Import reflections from JSON.
-- Pick a single direction (static MVP vs Next app) and consolidate.

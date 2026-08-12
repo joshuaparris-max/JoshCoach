@@ -22,11 +22,6 @@ start index.html        # Windows — or
 python -m http.server 8000
 ```
 
-> **Note on the two versions in this repo.** The runnable MVP above is intentionally
-> dependency-free and local-first. The repository also contains an earlier **Next.js + Prisma**
-> scaffold (`app/`, `prisma/`) which requires a PostgreSQL `DATABASE_URL` to build/run — it is
-> kept for reference but is **not** the current direction. The local-first static app is the
-> live MVP.
 
 ## Status
 
