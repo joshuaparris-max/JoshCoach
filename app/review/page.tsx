@@ -24,7 +24,9 @@ export default async function ReviewPage() {
   const mappedItems = items.map((item) => ({
     reviewItemId: item.id,
     questionId: item.questionId,
-    type: item.question.type === "mcq" ? "mcq" : "short_answer",
+    type: (item.question.type === "mcq" ? "mcq" : "short_answer") as
+      | "mcq"
+      | "short_answer",
     question: item.question.question,
     options: item.question.options ? JSON.parse(item.question.options) : null,
     correctAnswer: item.question.correctAnswer,
